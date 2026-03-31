@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Projet } from '../../lib/projets';
 
 interface RoueProps {
@@ -16,11 +16,19 @@ interface RoueProps {
 const MASTER_SEQUENCE = ['right', 'right', 'left', 'left', 'right', 'left'] as const;
 const MC_COLOR = '#c084fc';
 
+interface WindowWithWebkit extends Window {
+  webkitAudioContext?: typeof AudioContext;
+}
+
 export default function Roue({ projets, onSelect, onDeselect, visible, customSounds }: RoueProps) {
   const [rotation, setRotation] = useState(0);
   const [indexActif, setIndexActif] = useState(0);
   const [masterMode, setMasterMode] = useState(false);
   const [projetOuvert, setProjetOuvert] = useState(false);
+  // Scale adaptatif selon la taille du conteneur
+  const [scale, setScale] = useState(1);
+  const containerRef = useRef<HTMLDivElement>(null);
+
   const total = projets.length;
   const pasAngle = 360 / total;
   const couleurActive = projets[indexActif]?.couleur ?? '#c084fc';
@@ -29,15 +37,37 @@ export default function Roue({ projets, onSelect, onDeselect, visible, customSou
   const audioElements = useRef<{ activate?: HTMLAudioElement; nav?: HTMLAudioElement; easter?: HTMLAudioElement }>({});
   const masterIntervalRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const sequenceBuffer = useRef<string[]>([]);
+  const touchStartX = useRef<number | null>(null);
 
-  const getAudioContext = () => {
+  const indexActifRef = useRef(indexActif);
+  useEffect(() => { indexActifRef.current = indexActif; }, [indexActif]);
+  const masterModeRef = useRef(masterMode);
+  useEffect(() => { masterModeRef.current = masterMode; }, [masterMode]);
+  const projetOuvertRef = useRef(projetOuvert);
+  useEffect(() => { projetOuvertRef.current = projetOuvert; }, [projetOuvert]);
+
+  // ── Scale adaptatif ────────────────────────────────────────────────────────
+  useEffect(() => {
+    const updateScale = () => {
+      const size = Math.min(window.innerWidth * 0.9, 500);
+      setScale(size / 500);
+    };
+    updateScale();
+    window.addEventListener('resize', updateScale);
+    return () => window.removeEventListener('resize', updateScale);
+  }, []);
+
+  // ── Audio ──────────────────────────────────────────────────────────────────
+
+  const getAudioContext = useCallback(() => {
     if (audioContext.current) return audioContext.current;
-    const AudioCtx = (window.AudioContext || (window as any).webkitAudioContext) as typeof AudioContext;
+    const win = window as WindowWithWebkit;
+    const AudioCtx = win.webkitAudioContext ?? AudioContext;
     audioContext.current = new AudioCtx();
     return audioContext.current;
-  };
+  }, []);
 
-  const playTone = (frequency: number, duration: number, type: OscillatorType = 'sine') => {
+  const playTone = useCallback((frequency: number, duration: number, type: OscillatorType = 'sine') => {
     const ctx = getAudioContext();
     if (ctx.state === 'suspended') void ctx.resume();
     const osc = ctx.createOscillator();
@@ -50,9 +80,9 @@ export default function Roue({ projets, onSelect, onDeselect, visible, customSou
     osc.start();
     gain.gain.setTargetAtTime(0, ctx.currentTime + duration, 0.02);
     osc.stop(ctx.currentTime + duration + 0.05);
-  };
+  }, [getAudioContext]);
 
-  const playFallback = (kind: 'activate' | 'nav' | 'easter') => {
+  const playFallback = useCallback((kind: 'activate' | 'nav' | 'easter') => {
     if (kind === 'activate') {
       playTone(300, 0.12, 'triangle');
       setTimeout(() => playTone(440, 0.08, 'triangle'), 70);
@@ -63,16 +93,16 @@ export default function Roue({ projets, onSelect, onDeselect, visible, customSou
         setTimeout(() => playTone(300 + i * 80, 0.14, 'sawtooth'), delay);
       });
     }
-  };
+  }, [playTone]);
 
-  const playSound = async (kind: 'activate' | 'nav' | 'easter') => {
+  const playSound = useCallback(async (kind: 'activate' | 'nav' | 'easter') => {
     const audio = audioElements.current[kind];
     if (audio) {
       audio.currentTime = 0;
       try { await audio.play(); return; } catch { /* fallback */ }
     }
     playFallback(kind);
-  };
+  }, [playFallback]);
 
   useEffect(() => {
     if (!customSounds) return;
@@ -87,28 +117,18 @@ export default function Roue({ projets, onSelect, onDeselect, visible, customSou
     });
   }, [customSounds]);
 
-  const checkMasterSequence = (direction: 'left' | 'right') => {
-    const buf = sequenceBuffer.current;
-    buf.push(direction);
-    if (buf.length > MASTER_SEQUENCE.length) buf.shift();
-    if (
-      buf.length === MASTER_SEQUENCE.length &&
-      buf.every((v, i) => v === MASTER_SEQUENCE[i])
-    ) {
-      sequenceBuffer.current = [];
-      triggerMasterControl();
-    }
-  };
+  // ── Master Control ─────────────────────────────────────────────────────────
 
-  const triggerMasterControl = () => {
-    if (masterMode) return;
+  const triggerMasterControl = useCallback(() => {
+    if (masterModeRef.current) return;
     setMasterMode(true);
     setProjetOuvert(false);
     void playSound('easter');
 
+    const currentIndex = indexActifRef.current;
     const targetIndex = Math.floor(Math.random() * total);
     const extraTours = 3 * total;
-    const diff = (targetIndex - indexActif + total) % total;
+    const diff = (targetIndex - currentIndex + total) % total;
     const totalPas = extraTours + diff;
     let currentPas = 0;
     const vitesseInitiale = 60;
@@ -127,12 +147,10 @@ export default function Roue({ projets, onSelect, onDeselect, visible, customSou
         masterIntervalRef.current = null;
         return;
       }
-
       const progress = currentPas / totalPas;
       const vitesse = progress < 0.8
         ? vitesseInitiale
         : vitesseInitiale + (vitesseFinale - vitesseInitiale) * ((progress - 0.8) / 0.2);
-
       setRotation(r => r - pasAngle);
       setIndexActif(i => (i + 1) % total);
       currentPas++;
@@ -140,14 +158,23 @@ export default function Roue({ projets, onSelect, onDeselect, visible, customSou
     };
 
     masterIntervalRef.current = setTimeout(step, vitesseInitiale);
-  };
+  }, [total, pasAngle, projets, onSelect, playSound]);
+
+  const checkMasterSequence = useCallback((direction: 'left' | 'right') => {
+    const buf = sequenceBuffer.current;
+    buf.push(direction);
+    if (buf.length > MASTER_SEQUENCE.length) buf.shift();
+    if (buf.length === MASTER_SEQUENCE.length && buf.every((v, i) => v === MASTER_SEQUENCE[i])) {
+      sequenceBuffer.current = [];
+      triggerMasterControl();
+    }
+  }, [triggerMasterControl]);
+
+  // ── Reset ──────────────────────────────────────────────────────────────────
 
   useEffect(() => {
     if (!visible) {
-      if (masterIntervalRef.current) {
-        clearTimeout(masterIntervalRef.current);
-        masterIntervalRef.current = null;
-      }
+      if (masterIntervalRef.current) { clearTimeout(masterIntervalRef.current); masterIntervalRef.current = null; }
       setMasterMode(false);
       setProjetOuvert(false);
       setRotation(0);
@@ -156,20 +183,18 @@ export default function Roue({ projets, onSelect, onDeselect, visible, customSou
     }
   }, [visible]);
 
+  // ── Clavier ───────────────────────────────────────────────────────────────
+
   useEffect(() => {
     if (!visible) return;
-
     const handleKey = (e: KeyboardEvent) => {
-      // Échap / Backspace — ferme le projet ouvert
-      if ((e.key === 'Escape' || e.key === 'Backspace') && projetOuvert) {
+      if ((e.key === 'Escape' || e.key === 'Backspace') && projetOuvertRef.current) {
         e.preventDefault();
         setProjetOuvert(false);
         onDeselect?.();
         return;
       }
-
-      if (masterMode) return;
-
+      if (masterModeRef.current) return;
       if (e.key === 'ArrowRight') {
         setRotation(r => r - pasAngle);
         setIndexActif(i => (i + 1) % total);
@@ -181,18 +206,59 @@ export default function Roue({ projets, onSelect, onDeselect, visible, customSou
         checkMasterSequence('left');
         void playSound('nav');
       } else if (e.key === 'Enter' || e.key === ' ') {
-        if (projets[indexActif]) {
+        const idx = indexActifRef.current;
+        if (projets[idx]) {
           e.preventDefault();
           setProjetOuvert(true);
-          onSelect(projets[indexActif]);
+          onSelect(projets[idx]);
           void playSound('activate');
         }
       }
     };
-
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
-  }, [visible, total, pasAngle, projets, onSelect, onDeselect, indexActif, masterMode, projetOuvert]);
+  }, [visible, total, pasAngle, projets, onSelect, onDeselect, checkMasterSequence, playSound]);
+
+  // ── Swipe tactile ─────────────────────────────────────────────────────────
+
+  useEffect(() => {
+    if (!visible) return;
+    const el = containerRef.current;
+    if (!el) return;
+
+    const onTouchStart = (e: TouchEvent) => {
+      touchStartX.current = e.touches[0].clientX;
+    };
+
+    const onTouchEnd = (e: TouchEvent) => {
+      if (touchStartX.current === null) return;
+      if (masterModeRef.current) return;
+      const dx = e.changedTouches[0].clientX - touchStartX.current;
+      touchStartX.current = null;
+      // Seuil de 40px pour déclencher le swipe
+      if (Math.abs(dx) < 40) return;
+      if (dx < 0) {
+        // Swipe gauche → next
+        setRotation(r => r - pasAngle);
+        setIndexActif(i => (i + 1) % total);
+        checkMasterSequence('right');
+        void playSound('nav');
+      } else {
+        // Swipe droite → prev
+        setRotation(r => r + pasAngle);
+        setIndexActif(i => (i - 1 + total) % total);
+        checkMasterSequence('left');
+        void playSound('nav');
+      }
+    };
+
+    el.addEventListener('touchstart', onTouchStart, { passive: true });
+    el.addEventListener('touchend', onTouchEnd, { passive: true });
+    return () => {
+      el.removeEventListener('touchstart', onTouchStart);
+      el.removeEventListener('touchend', onTouchEnd);
+    };
+  }, [visible, total, pasAngle, checkMasterSequence, playSound]);
 
   if (!visible) return null;
 
@@ -206,7 +272,15 @@ export default function Roue({ projets, onSelect, onDeselect, visible, customSou
   const anneauStroke = masterMode ? MC_COLOR : '#c084fc';
 
   return (
-    <div className="absolute pointer-events-none" style={{ width: 500, height: 500, top: 0, left: 0 }}>
+    <div
+      ref={containerRef}
+      className="absolute pointer-events-none"
+      style={{
+        width: 500, height: 500, top: 0, left: 0,
+        transform: `scale(${scale})`,
+        transformOrigin: 'center center',
+      }}
+    >
       <svg width="500" height="500" viewBox="0 0 500 500" className="absolute inset-0" style={{ pointerEvents: 'none' }}>
         <circle cx={CX} cy={CY} r={R_EXT} fill={anneauFill} stroke={anneauStroke} strokeWidth="2.5" />
         {masterMode && (
@@ -279,6 +353,8 @@ export default function Roue({ projets, onSelect, onDeselect, visible, customSou
                   display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
                   background: 'none', border: 'none',
                   cursor: masterMode ? 'default' : 'pointer', padding: 0,
+                  // Zone de tap plus grande sur mobile
+                  minWidth: 48, minHeight: 48,
                 }}
               >
                 <div style={{
@@ -321,7 +397,7 @@ export default function Roue({ projets, onSelect, onDeselect, visible, customSou
           fontSize: 9, letterSpacing: '0.15em', textTransform: 'uppercase',
           whiteSpace: 'nowrap', transition: 'color 0.3s',
         }}>
-          {masterMode ? '— MASTER CONTROL —' : projetOuvert ? 'échap • fermer' : '← → naviguer • entrée • ouvrir'}
+          {masterMode ? '— MASTER CONTROL —' : projetOuvert ? 'échap • fermer' : '← swipe → • tap • ouvrir'}
         </span>
       </div>
     </div>

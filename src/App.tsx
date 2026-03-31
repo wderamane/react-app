@@ -13,9 +13,9 @@ export default function App() {
   const [estActif, setEstActif] = useState(false);
   const [selection, setSelection] = useState<Projet | null>(null);
 
-  const activateAudio  = useRef<HTMLAudioElement>(new Audio('/sounds/activation.mp3'));
-  const openAudio      = useRef<HTMLAudioElement>(new Audio('/sounds/open.mp3'));
-  const closeAudio     = useRef<HTMLAudioElement>(new Audio('/sounds/close.mp3'));
+  const activateAudio = useRef<HTMLAudioElement>(new Audio('/sounds/activation.mp3'));
+  const openAudio     = useRef<HTMLAudioElement>(new Audio('/sounds/open.mp3'));
+  const closeAudio    = useRef<HTMLAudioElement>(new Audio('/sounds/close.mp3'));
 
   const playSound = (ref: React.RefObject<HTMLAudioElement>) => {
     const audio = ref.current;
@@ -57,22 +57,28 @@ export default function App() {
   }, [handleCadran]);
 
   return (
-    <div className="min-h-screen bg-black flex flex-col items-center justify-center p-8 gap-8">
+    <div className="min-h-screen bg-black flex flex-col items-center justify-center p-4 md:p-8 gap-6 md:gap-8">
 
       <header className="text-center">
-        <h1 className={"text-4xl font-black tracking-[0.3em] transition-colors duration-500 " + (estActif ? 'text-purple-500' : 'text-gray-800')}>
+        <h1 className={"text-2xl md:text-4xl font-black tracking-[0.3em] transition-colors duration-500 " + (estActif ? 'text-purple-500' : 'text-gray-800')}>
           Portfolios
         </h1>
         <div className={"h-1 mx-auto mt-2 transition-all duration-500 " + (estActif ? 'bg-purple-500 w-48' : 'bg-gray-800 w-24')} />
       </header>
 
-      <div className="flex items-center justify-center gap-8 w-full max-w-5xl">
+      {/* Layout : 1 colonne sur mobile, 3 colonnes sur desktop */}
+      <div className="flex flex-col md:flex-row items-center justify-center gap-6 md:gap-8 w-full max-w-5xl">
 
-        <div className="shrink-0">
+        {/* Profil — en haut sur mobile, à gauche sur desktop */}
+        <div className="shrink-0 w-full md:w-auto flex justify-center">
           <CarteProfil />
         </div>
 
-        <div className="relative flex items-center justify-center shrink-0" style={{ width: '500px', height: '500px' }}>
+        {/* Cadran + roue — centré */}
+        <div
+          className="relative flex items-center justify-center shrink-0"
+          style={{ width: 'min(500px, 90vw)', height: 'min(500px, 90vw)' }}
+        >
           <Roue
             projets={projetsRoue}
             onSelect={handleOuvrirProjet}
@@ -87,7 +93,8 @@ export default function App() {
           <Cadran estActif={estActif} onAction={handleCadran} />
         </div>
 
-        <div className="shrink-0">
+        {/* Langages — en bas sur mobile, à droite sur desktop */}
+        <div className="shrink-0 w-full md:w-auto flex justify-center">
           <CarteLangages />
         </div>
 
@@ -98,10 +105,7 @@ export default function App() {
       </footer>
 
       {selection && (
-        <CarteProjet
-          projet={selection}
-          onFermer={handleFermerProjet}
-        />
+        <CarteProjet projet={selection} onFermer={handleFermerProjet} />
       )}
     </div>
   );
