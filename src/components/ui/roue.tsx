@@ -25,10 +25,9 @@ export default function Roue({ projets, onSelect, onDeselect, visible, customSou
   const [indexActif, setIndexActif] = useState(0);
   const [masterMode, setMasterMode] = useState(false);
   const [projetOuvert, setProjetOuvert] = useState(false);
-  // Scale adaptatif selon la taille du conteneur
   const [scale, setScale] = useState(1);
-  const containerRef = useRef<HTMLDivElement>(null);
 
+  const containerRef = useRef<HTMLDivElement>(null);
   const total = projets.length;
   const pasAngle = 360 / total;
   const couleurActive = projets[indexActif]?.couleur ?? '#c084fc';
@@ -46,15 +45,15 @@ export default function Roue({ projets, onSelect, onDeselect, visible, customSou
   const projetOuvertRef = useRef(projetOuvert);
   useEffect(() => { projetOuvertRef.current = projetOuvert; }, [projetOuvert]);
 
-  // ── Scale adaptatif ────────────────────────────────────────────────────────
+  // Scale : le conteneur parent fait min(500px, 90vw), la roue SVG est en 500×500
   useEffect(() => {
-    const updateScale = () => {
+    const update = () => {
       const size = Math.min(window.innerWidth * 0.9, 500);
       setScale(size / 500);
     };
-    updateScale();
-    window.addEventListener('resize', updateScale);
-    return () => window.removeEventListener('resize', updateScale);
+    update();
+    window.addEventListener('resize', update);
+    return () => window.removeEventListener('resize', update);
   }, []);
 
   // ── Audio ──────────────────────────────────────────────────────────────────
@@ -226,25 +225,18 @@ export default function Roue({ projets, onSelect, onDeselect, visible, customSou
     const el = containerRef.current;
     if (!el) return;
 
-    const onTouchStart = (e: TouchEvent) => {
-      touchStartX.current = e.touches[0].clientX;
-    };
-
+    const onTouchStart = (e: TouchEvent) => { touchStartX.current = e.touches[0].clientX; };
     const onTouchEnd = (e: TouchEvent) => {
-      if (touchStartX.current === null) return;
-      if (masterModeRef.current) return;
+      if (touchStartX.current === null || masterModeRef.current) return;
       const dx = e.changedTouches[0].clientX - touchStartX.current;
       touchStartX.current = null;
-      // Seuil de 40px pour déclencher le swipe
       if (Math.abs(dx) < 40) return;
       if (dx < 0) {
-        // Swipe gauche → next
         setRotation(r => r - pasAngle);
         setIndexActif(i => (i + 1) % total);
         checkMasterSequence('right');
         void playSound('nav');
       } else {
-        // Swipe droite → prev
         setRotation(r => r + pasAngle);
         setIndexActif(i => (i - 1 + total) % total);
         checkMasterSequence('left');
@@ -262,8 +254,9 @@ export default function Roue({ projets, onSelect, onDeselect, visible, customSou
 
   if (!visible) return null;
 
-  const CX = 250;
-  const CY = 250;
+  const SIZE = 500; // taille fixe du SVG interne
+  const CX = SIZE / 2;
+  const CY = SIZE / 2;
   const R_INT = 112;
   const R_EXT = 178;
   const R_ICONES = (R_EXT + R_INT) / 2;
@@ -272,133 +265,147 @@ export default function Roue({ projets, onSelect, onDeselect, visible, customSou
   const anneauStroke = masterMode ? MC_COLOR : '#c084fc';
 
   return (
+    // Conteneur qui remplit exactement la zone parent (inset-0)
+    // et scale le contenu SVG 500×500 pour qu'il rentre
     <div
       ref={containerRef}
-      className="absolute pointer-events-none"
-      style={{
-        width: 500, height: 500, top: 0, left: 0,
-        transform: `scale(${scale})`,
-        transformOrigin: 'center center',
-      }}
+      className="absolute inset-0 flex items-center justify-center pointer-events-none"
     >
-      <svg width="500" height="500" viewBox="0 0 500 500" className="absolute inset-0" style={{ pointerEvents: 'none' }}>
-        <circle cx={CX} cy={CY} r={R_EXT} fill={anneauFill} stroke={anneauStroke} strokeWidth="2.5" />
-        {masterMode && (
-          <>
-            <circle cx={CX} cy={CY} r={R_EXT + 10} fill="none" stroke={MC_COLOR} strokeWidth="3" opacity="0.5" />
-            <circle cx={CX} cy={CY} r={R_EXT + 20} fill="none" stroke={MC_COLOR} strokeWidth="1.5" opacity="0.25" />
-          </>
-        )}
-        <circle cx={CX} cy={CY} r={R_INT} fill="#000" stroke={masterMode ? MC_COLOR : '#7c3aed'} strokeWidth="2" />
-        <circle cx={CX} cy={CY - R_ICONES} r="36" fill={`${masterMode ? MC_COLOR : couleurActive}22`} />
-        <polygon
-          points={`${CX},${CY - R_EXT + 14} ${CX - 9},${CY - R_EXT - 4} ${CX + 9},${CY - R_EXT - 4}`}
-          fill={masterMode ? MC_COLOR : '#f0abfc'}
-        />
-        {masterMode && (
-          <text x={CX} y={CY + R_EXT + 22} textAnchor="middle" fill={MC_COLOR}
-            fontSize="11" fontFamily="monospace" fontWeight="bold" letterSpacing="4">
-            MASTER CONTROL
-          </text>
-        )}
-      </svg>
-
+      {/* Sous-conteneur fixe 500×500 scalé */}
       <div
-        className="absolute"
         style={{
-          width: 500, height: 500, top: 0, left: 0,
-          transformOrigin: `${CX}px ${CY}px`,
-          transform: `rotate(${rotation}deg)`,
-          transition: masterMode ? 'transform 0.08s linear' : 'transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+          width: SIZE,
+          height: SIZE,
+          transform: `scale(${scale})`,
+          transformOrigin: 'center center',
+          position: 'relative',
+          flexShrink: 0,
         }}
       >
-        {projets.map((projet, i) => {
-          const angleDeg = (i / total) * 360 - 90;
-          const angleRad = (angleDeg * Math.PI) / 180;
-          const x = CX + Math.cos(angleRad) * R_ICONES;
-          const y = CY + Math.sin(angleRad) * R_ICONES;
-          const estSelectionne = i === indexActif;
-          const couleurSelect = masterMode ? MC_COLOR : projet.couleur;
-          const couleurBord = estSelectionne ? couleurSelect : 'rgba(192,132,252,0.55)';
+        {/* SVG statique : anneau */}
+        <svg
+          width={SIZE} height={SIZE}
+          viewBox={`0 0 ${SIZE} ${SIZE}`}
+          style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}
+        >
+          <circle cx={CX} cy={CY} r={R_EXT} fill={anneauFill} stroke={anneauStroke} strokeWidth="2.5" />
+          {masterMode && (
+            <>
+              <circle cx={CX} cy={CY} r={R_EXT + 10} fill="none" stroke={MC_COLOR} strokeWidth="3" opacity="0.5" />
+              <circle cx={CX} cy={CY} r={R_EXT + 20} fill="none" stroke={MC_COLOR} strokeWidth="1.5" opacity="0.25" />
+            </>
+          )}
+          <circle cx={CX} cy={CY} r={R_INT} fill="#000" stroke={masterMode ? MC_COLOR : '#7c3aed'} strokeWidth="2" />
+          <circle cx={CX} cy={CY - R_ICONES} r="36" fill={`${masterMode ? MC_COLOR : couleurActive}22`} />
+          <polygon
+            points={`${CX},${CY - R_EXT + 14} ${CX - 9},${CY - R_EXT - 4} ${CX + 9},${CY - R_EXT - 4}`}
+            fill={masterMode ? MC_COLOR : '#f0abfc'}
+          />
+          {masterMode && (
+            <text x={CX} y={CY + R_EXT + 22} textAnchor="middle" fill={MC_COLOR}
+              fontSize="11" fontFamily="monospace" fontWeight="bold" letterSpacing="4">
+              MASTER CONTROL
+            </text>
+          )}
+        </svg>
 
-          return (
-            <div
-              key={projet.id}
-              className="absolute pointer-events-auto"
-              style={{
-                left: x, top: y,
-                transform: `translate(-50%, -50%) rotate(${-rotation}deg)`,
-                transition: masterMode ? 'transform 0.08s linear' : 'transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-              }}
-            >
-              <button
-                disabled={masterMode}
-                onClick={() => {
-                  if (masterMode) return;
-                  if (estSelectionne) {
-                    setProjetOuvert(true);
-                    onSelect(projet);
-                    void playSound('activate');
-                  } else {
-                    const diff = (i - indexActif + total) % total;
-                    const sens = diff <= total / 2 ? -1 : 1;
-                    const pas = diff <= total / 2 ? diff : total - diff;
-                    setRotation(r => r + sens * pas * pasAngle);
-                    setIndexActif(i);
-                    void playSound('nav');
-                    checkMasterSequence(sens === -1 ? 'right' : 'left');
-                  }
-                }}
+        {/* Conteneur rotatif des icônes */}
+        <div
+          style={{
+            position: 'absolute', width: SIZE, height: SIZE, top: 0, left: 0,
+            transformOrigin: `${CX}px ${CY}px`,
+            transform: `rotate(${rotation}deg)`,
+            transition: masterMode ? 'transform 0.08s linear' : 'transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+          }}
+        >
+          {projets.map((projet, i) => {
+            const angleDeg = (i / total) * 360 - 90;
+            const angleRad = (angleDeg * Math.PI) / 180;
+            const x = CX + Math.cos(angleRad) * R_ICONES;
+            const y = CY + Math.sin(angleRad) * R_ICONES;
+            const estSelectionne = i === indexActif;
+            const couleurSelect = masterMode ? MC_COLOR : projet.couleur;
+            const couleurBord = estSelectionne ? couleurSelect : 'rgba(192,132,252,0.55)';
+
+            return (
+              <div
+                key={projet.id}
+                className="absolute pointer-events-auto"
                 style={{
-                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
-                  background: 'none', border: 'none',
-                  cursor: masterMode ? 'default' : 'pointer', padding: 0,
-                  // Zone de tap plus grande sur mobile
-                  minWidth: 48, minHeight: 48,
+                  left: x, top: y,
+                  transform: `translate(-50%, -50%) rotate(${-rotation}deg)`,
+                  transition: masterMode ? 'transform 0.08s linear' : 'transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
                 }}
               >
-                <div style={{
-                  width: estSelectionne ? 58 : 44, height: estSelectionne ? 58 : 44,
-                  borderRadius: '50%',
-                  backgroundColor: estSelectionne ? `${couleurSelect}33` : 'rgba(0,0,0,0.4)',
-                  border: `${estSelectionne ? 3 : 2}px solid ${couleurBord}`,
-                  boxShadow: estSelectionne ? `0 0 22px ${couleurSelect}bb` : 'none',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  transition: 'all 0.3s',
-                }}>
-                  <svg viewBox="0 0 70 70" xmlns="http://www.w3.org/2000/svg"
-                    style={{
-                      width: estSelectionne ? 32 : 24, height: estSelectionne ? 32 : 24,
-                      transition: 'all 0.3s',
-                      filter: estSelectionne ? `drop-shadow(0 0 6px ${couleurSelect})` : 'none',
-                    }}>
-                    <path d={projet.symbolePath} fill="none"
-                      stroke={estSelectionne ? couleurSelect : 'rgba(192,132,252,0.75)'}
-                      strokeWidth="3.5" strokeLinejoin="round" strokeLinecap="round" />
-                  </svg>
-                </div>
-                <span style={{
-                  fontSize: 9, fontWeight: 900, letterSpacing: '0.15em', textTransform: 'uppercase',
-                  color: estSelectionne ? couleurSelect : 'transparent',
-                  textShadow: estSelectionne ? `0 0 10px ${couleurSelect}` : 'none',
-                  transition: 'color 0.3s, text-shadow 0.3s', whiteSpace: 'nowrap',
-                }}>
-                  {projet.nom}
-                </span>
-              </button>
-            </div>
-          );
-        })}
-      </div>
+                <button
+                  disabled={masterMode}
+                  onClick={() => {
+                    if (masterMode) return;
+                    if (estSelectionne) {
+                      setProjetOuvert(true);
+                      onSelect(projet);
+                      void playSound('activate');
+                    } else {
+                      const diff = (i - indexActif + total) % total;
+                      const sens = diff <= total / 2 ? -1 : 1;
+                      const pas = diff <= total / 2 ? diff : total - diff;
+                      setRotation(r => r + sens * pas * pasAngle);
+                      setIndexActif(i);
+                      void playSound('nav');
+                      checkMasterSequence(sens === -1 ? 'right' : 'left');
+                    }
+                  }}
+                  style={{
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+                    background: 'none', border: 'none',
+                    cursor: masterMode ? 'default' : 'pointer', padding: 0,
+                    minWidth: 48, minHeight: 48,
+                  }}
+                >
+                  <div style={{
+                    width: estSelectionne ? 58 : 44, height: estSelectionne ? 58 : 44,
+                    borderRadius: '50%',
+                    backgroundColor: estSelectionne ? `${couleurSelect}33` : 'rgba(0,0,0,0.4)',
+                    border: `${estSelectionne ? 3 : 2}px solid ${couleurBord}`,
+                    boxShadow: estSelectionne ? `0 0 22px ${couleurSelect}bb` : 'none',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    transition: 'all 0.3s',
+                  }}>
+                    <svg viewBox="0 0 70 70" xmlns="http://www.w3.org/2000/svg"
+                      style={{
+                        width: estSelectionne ? 32 : 24, height: estSelectionne ? 32 : 24,
+                        transition: 'all 0.3s',
+                        filter: estSelectionne ? `drop-shadow(0 0 6px ${couleurSelect})` : 'none',
+                      }}>
+                      <path d={projet.symbolePath} fill="none"
+                        stroke={estSelectionne ? couleurSelect : 'rgba(192,132,252,0.75)'}
+                        strokeWidth="3.5" strokeLinejoin="round" strokeLinecap="round" />
+                    </svg>
+                  </div>
+                  <span style={{
+                    fontSize: 9, fontWeight: 900, letterSpacing: '0.15em', textTransform: 'uppercase',
+                    color: estSelectionne ? couleurSelect : 'transparent',
+                    textShadow: estSelectionne ? `0 0 10px ${couleurSelect}` : 'none',
+                    transition: 'color 0.3s, text-shadow 0.3s', whiteSpace: 'nowrap',
+                  }}>
+                    {projet.nom}
+                  </span>
+                </button>
+              </div>
+            );
+          })}
+        </div>
 
-      <div className="absolute pointer-events-none" style={{ bottom: 10, left: '50%', transform: 'translateX(-50%)' }}>
-        <span style={{
-          color: masterMode ? 'rgba(192,132,252,0.7)' : 'rgba(192,132,252,0.45)',
-          fontSize: 9, letterSpacing: '0.15em', textTransform: 'uppercase',
-          whiteSpace: 'nowrap', transition: 'color 0.3s',
-        }}>
-          {masterMode ? '— MASTER CONTROL —' : projetOuvert ? 'échap • fermer' : '← swipe → • tap • ouvrir'}
-        </span>
+        {/* Hint */}
+        <div style={{ position: 'absolute', bottom: 10, left: '50%', transform: 'translateX(-50%)', pointerEvents: 'none' }}>
+          <span style={{
+            color: masterMode ? 'rgba(192,132,252,0.7)' : 'rgba(192,132,252,0.45)',
+            fontSize: 9, letterSpacing: '0.15em', textTransform: 'uppercase',
+            whiteSpace: 'nowrap', transition: 'color 0.3s',
+          }}>
+            {masterMode ? '— MASTER CONTROL —' : projetOuvert ? 'échap • fermer' : '← swipe → • tap • ouvrir'}
+          </span>
+        </div>
       </div>
     </div>
   );

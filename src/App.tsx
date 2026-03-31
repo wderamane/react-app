@@ -42,7 +42,6 @@ export default function App() {
     setSelection(null);
   };
 
-  // Touche A → toggle cadran
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
       const tag = (e.target as HTMLElement).tagName;
@@ -69,16 +68,17 @@ export default function App() {
       {/* Layout : 1 colonne sur mobile, 3 colonnes sur desktop */}
       <div className="flex flex-col md:flex-row items-center justify-center gap-6 md:gap-8 w-full max-w-5xl">
 
-        {/* Profil — en haut sur mobile, à gauche sur desktop */}
+        {/* Profil */}
         <div className="shrink-0 w-full md:w-auto flex justify-center">
           <CarteProfil />
         </div>
 
-        {/* Cadran + roue — centré */}
+        {/* Zone cadran — taille fixe, tout est centré dedans */}
         <div
-          className="relative flex items-center justify-center shrink-0"
+          className="relative shrink-0 flex items-center justify-center"
           style={{ width: 'min(500px, 90vw)', height: 'min(500px, 90vw)' }}
         >
+          {/* Roue — prend tout l'espace du conteneur */}
           <Roue
             projets={projetsRoue}
             onSelect={handleOuvrirProjet}
@@ -90,10 +90,15 @@ export default function App() {
               easter: '/sounds/masterC.mp3',
             }}
           />
-          <Cadran estActif={estActif} onAction={handleCadran} />
+          {/* Cadran — centré par-dessus la roue */}
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <div className="pointer-events-auto">
+              <Cadran estActif={estActif} onAction={handleCadran} />
+            </div>
+          </div>
         </div>
 
-        {/* Langages — en bas sur mobile, à droite sur desktop */}
+        {/* Langages */}
         <div className="shrink-0 w-full md:w-auto flex justify-center">
           <CarteLangages />
         </div>
