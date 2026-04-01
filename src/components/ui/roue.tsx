@@ -5,6 +5,7 @@ interface RoueProps {
   projets: Projet[];
   onSelect: (projet: Projet) => void;
   onDeselect?: () => void;
+  onNavigation?: (direction: 'left' | 'right') => void;
   visible: boolean;
   customSounds?: {
     activate?: string;
@@ -20,7 +21,7 @@ interface WindowWithWebkit extends Window {
   webkitAudioContext?: typeof AudioContext;
 }
 
-export default function Roue({ projets, onSelect, onDeselect, visible, customSounds }: RoueProps) {
+export default function Roue({ projets, onSelect, onDeselect, onNavigation, visible, customSounds }: RoueProps) {
   const [rotation, setRotation] = useState(0);
   const [indexActif, setIndexActif] = useState(0);
   const [masterMode, setMasterMode] = useState(false);
@@ -41,6 +42,8 @@ export default function Roue({ projets, onSelect, onDeselect, visible, customSou
   useEffect(() => { masterModeRef.current = masterMode; }, [masterMode]);
   const projetOuvertRef = useRef(projetOuvert);
   useEffect(() => { projetOuvertRef.current = projetOuvert; }, [projetOuvert]);
+  const onNavigationRef = useRef(onNavigation);
+  useEffect(() => { onNavigationRef.current = onNavigation; }, [onNavigation]);
 
   // ── Audio ──────────────────────────────────────────────────────────────────
 
@@ -184,11 +187,15 @@ export default function Roue({ projets, onSelect, onDeselect, visible, customSou
         setRotation(r => r - pasAngle);
         setIndexActif(i => (i + 1) % total);
         checkMasterSequence('right');
+        // Remonte aussi la direction au parent pour la séquence skin
+        onNavigationRef.current?.('right');
         void playSound('nav');
       } else if (e.key === 'ArrowLeft') {
         setRotation(r => r + pasAngle);
         setIndexActif(i => (i - 1 + total) % total);
         checkMasterSequence('left');
+        // Remonte aussi la direction au parent pour la séquence skin
+        onNavigationRef.current?.('left');
         void playSound('nav');
       } else if (e.key === 'Enter' || e.key === ' ') {
         const idx = indexActifRef.current;
@@ -220,7 +227,6 @@ export default function Roue({ projets, onSelect, onDeselect, visible, customSou
     <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
       <div style={{ width: SIZE, height: SIZE, position: 'relative', flexShrink: 0 }}>
 
-        {/* SVG anneau statique */}
         <svg width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`}
           style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
           <circle cx={CX} cy={CY} r={R_EXT} fill={anneauFill} stroke={anneauStroke} strokeWidth="2.5" />
@@ -244,7 +250,6 @@ export default function Roue({ projets, onSelect, onDeselect, visible, customSou
           )}
         </svg>
 
-        {/* Conteneur rotatif */}
         <div style={{
           position: 'absolute', width: SIZE, height: SIZE, top: 0, left: 0,
           transformOrigin: `${CX}px ${CY}px`,
@@ -283,6 +288,7 @@ export default function Roue({ projets, onSelect, onDeselect, visible, customSou
                       setIndexActif(i);
                       void playSound('nav');
                       checkMasterSequence(sens === -1 ? 'right' : 'left');
+                      onNavigationRef.current?.(sens === -1 ? 'right' : 'left');
                     }
                   }}
                   style={{
@@ -325,7 +331,6 @@ export default function Roue({ projets, onSelect, onDeselect, visible, customSou
           })}
         </div>
 
-        {/* Hint */}
         <div style={{ position: 'absolute', bottom: 10, left: '50%', transform: 'translateX(-50%)', pointerEvents: 'none' }}>
           <span style={{
             color: masterMode ? 'rgba(192,132,252,0.7)' : 'rgba(192,132,252,0.45)',
