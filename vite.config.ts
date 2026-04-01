@@ -1,8 +1,16 @@
+import path from 'path'; // N'oublie pas d'installer @types/node si nécessaire : npm i -D @types/node
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 
 export default defineConfig({
+  // --- AJOUT INDISPENSABLE POUR LES ALIAS ---
+  resolve: {
+    alias: {
+      "@": path.resolve(__dirname, "./src"),
+    },
+  },
+  // ------------------------------------------
   plugins: [
     react(),
     VitePWA({
@@ -33,13 +41,30 @@ export default defineConfig({
         ],
       },
       workbox: {
-        // Met en cache tous les assets statiques
+        // Optimisation : exclure node_modules et se concentrer sur les assets générés
         globPatterns: ['**/*.{js,css,html,ico,png,jpg,svg,mp3,pdf}'],
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
             handler: 'CacheFirst',
-            options: { cacheName: 'google-fonts-cache' },
+            options: { 
+              cacheName: 'google-fonts-cache',
+              expiration: {
+                maxEntries: 10,
+                maxAgeSeconds: 60 * 60 * 24 * 365 // 1 an
+              }
+            },
+          },
+          {
+            urlPattern: /^https:\/\/fonts\.gstatic\.com\/.*/i,
+            handler: 'CacheFirst',
+            options: { 
+              cacheName: 'gstatic-fonts-cache',
+              expiration: {
+                maxEntries: 10,
+                maxAgeSeconds: 60 * 60 * 24 * 365 
+              }
+            },
           },
         ],
       },
