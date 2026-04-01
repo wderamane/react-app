@@ -23,7 +23,7 @@ export default function CarteProjet({ projet, onFermer }: CarteProjetProps) {
           className="relative h-12 flex items-center justify-center gap-2"
           style={{ backgroundColor: `${projet.couleur}22` }}
         >
-          <svg viewBox="0 0 70 70" className="w-7 h-7 flex-shrink-0" xmlns="http://www.w3.org/2000/svg">
+          <svg viewBox="0 0 70 70" className="w-7 h-7 shrink-0" xmlns="http://www.w3.org/2000/svg">
             <path d={projet.symbolePath} fill="none" stroke={projet.couleur} strokeWidth="3" strokeLinejoin="round" />
           </svg>
           <span className="text-sm font-black tracking-[0.3em] uppercase" style={{ color: projet.couleur }}>

@@ -56,29 +56,28 @@ export default function App() {
   }, [handleCadran]);
 
   return (
-    <div className="min-h-screen bg-black flex flex-col items-center justify-center p-4 md:p-8 gap-6 md:gap-8">
+    <div className="min-h-screen bg-black flex flex-col items-center justify-center p-8 gap-8">
 
       <header className="text-center">
-        <h1 className={"text-2xl md:text-4xl font-black tracking-[0.3em] transition-colors duration-500 " + (estActif ? 'text-purple-500' : 'text-gray-800')}>
+        <h1 className={"text-4xl font-black tracking-[0.3em] transition-colors duration-500 " + (estActif ? 'text-purple-500' : 'text-gray-800')}>
           Portfolios
         </h1>
         <div className={"h-1 mx-auto mt-2 transition-all duration-500 " + (estActif ? 'bg-purple-500 w-48' : 'bg-gray-800 w-24')} />
       </header>
 
-      {/* Layout : 1 colonne sur mobile, 3 colonnes sur desktop */}
-      <div className="flex flex-col md:flex-row items-center justify-center gap-6 md:gap-8 w-full max-w-5xl">
+      {/* Layout 3 colonnes fixe */}
+      <div className="flex flex-row items-center justify-center gap-8 w-full max-w-5xl">
 
         {/* Profil */}
-        <div className="shrink-0 w-full md:w-auto flex justify-center">
+        <div className="shrink-0">
           <CarteProfil />
         </div>
 
-        {/* Zone cadran — taille fixe, tout est centré dedans */}
+        {/* Zone cadran 500×500 */}
         <div
           className="relative shrink-0 flex items-center justify-center"
-          style={{ width: 'min(500px, 90vw)', height: 'min(500px, 90vw)' }}
+          style={{ width: 500, height: 500 }}
         >
-          {/* Roue — prend tout l'espace du conteneur */}
           <Roue
             projets={projetsRoue}
             onSelect={handleOuvrirProjet}
@@ -90,7 +89,6 @@ export default function App() {
               easter: '/sounds/masterC.mp3',
             }}
           />
-          {/* Cadran — centré par-dessus la roue */}
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
             <div className="pointer-events-auto">
               <Cadran estActif={estActif} onAction={handleCadran} />
@@ -99,7 +97,7 @@ export default function App() {
         </div>
 
         {/* Langages */}
-        <div className="shrink-0 w-full md:w-auto flex justify-center">
+        <div className="shrink-0">
           <CarteLangages />
         </div>
 

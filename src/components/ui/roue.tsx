@@ -25,9 +25,7 @@ export default function Roue({ projets, onSelect, onDeselect, visible, customSou
   const [indexActif, setIndexActif] = useState(0);
   const [masterMode, setMasterMode] = useState(false);
   const [projetOuvert, setProjetOuvert] = useState(false);
-  const [scale, setScale] = useState(1);
 
-  const containerRef = useRef<HTMLDivElement>(null);
   const total = projets.length;
   const pasAngle = 360 / total;
   const couleurActive = projets[indexActif]?.couleur ?? '#c084fc';
@@ -36,7 +34,6 @@ export default function Roue({ projets, onSelect, onDeselect, visible, customSou
   const audioElements = useRef<{ activate?: HTMLAudioElement; nav?: HTMLAudioElement; easter?: HTMLAudioElement }>({});
   const masterIntervalRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const sequenceBuffer = useRef<string[]>([]);
-  const touchStartX = useRef<number | null>(null);
 
   const indexActifRef = useRef(indexActif);
   useEffect(() => { indexActifRef.current = indexActif; }, [indexActif]);
@@ -44,17 +41,6 @@ export default function Roue({ projets, onSelect, onDeselect, visible, customSou
   useEffect(() => { masterModeRef.current = masterMode; }, [masterMode]);
   const projetOuvertRef = useRef(projetOuvert);
   useEffect(() => { projetOuvertRef.current = projetOuvert; }, [projetOuvert]);
-
-  // Scale : le conteneur parent fait min(500px, 90vw), la roue SVG est en 500×500
-  useEffect(() => {
-    const update = () => {
-      const size = Math.min(window.innerWidth * 0.9, 500);
-      setScale(size / 500);
-    };
-    update();
-    window.addEventListener('resize', update);
-    return () => window.removeEventListener('resize', update);
-  }, []);
 
   // ── Audio ──────────────────────────────────────────────────────────────────
 
@@ -218,43 +204,9 @@ export default function Roue({ projets, onSelect, onDeselect, visible, customSou
     return () => window.removeEventListener('keydown', handleKey);
   }, [visible, total, pasAngle, projets, onSelect, onDeselect, checkMasterSequence, playSound]);
 
-  // ── Swipe tactile ─────────────────────────────────────────────────────────
-
-  useEffect(() => {
-    if (!visible) return;
-    const el = containerRef.current;
-    if (!el) return;
-
-    const onTouchStart = (e: TouchEvent) => { touchStartX.current = e.touches[0].clientX; };
-    const onTouchEnd = (e: TouchEvent) => {
-      if (touchStartX.current === null || masterModeRef.current) return;
-      const dx = e.changedTouches[0].clientX - touchStartX.current;
-      touchStartX.current = null;
-      if (Math.abs(dx) < 40) return;
-      if (dx < 0) {
-        setRotation(r => r - pasAngle);
-        setIndexActif(i => (i + 1) % total);
-        checkMasterSequence('right');
-        void playSound('nav');
-      } else {
-        setRotation(r => r + pasAngle);
-        setIndexActif(i => (i - 1 + total) % total);
-        checkMasterSequence('left');
-        void playSound('nav');
-      }
-    };
-
-    el.addEventListener('touchstart', onTouchStart, { passive: true });
-    el.addEventListener('touchend', onTouchEnd, { passive: true });
-    return () => {
-      el.removeEventListener('touchstart', onTouchStart);
-      el.removeEventListener('touchend', onTouchEnd);
-    };
-  }, [visible, total, pasAngle, checkMasterSequence, playSound]);
-
   if (!visible) return null;
 
-  const SIZE = 500; // taille fixe du SVG interne
+  const SIZE = 500;
   const CX = SIZE / 2;
   const CY = SIZE / 2;
   const R_INT = 112;
@@ -265,29 +217,12 @@ export default function Roue({ projets, onSelect, onDeselect, visible, customSou
   const anneauStroke = masterMode ? MC_COLOR : '#c084fc';
 
   return (
-    // Conteneur qui remplit exactement la zone parent (inset-0)
-    // et scale le contenu SVG 500×500 pour qu'il rentre
-    <div
-      ref={containerRef}
-      className="absolute inset-0 flex items-center justify-center pointer-events-none"
-    >
-      {/* Sous-conteneur fixe 500×500 scalé */}
-      <div
-        style={{
-          width: SIZE,
-          height: SIZE,
-          transform: `scale(${scale})`,
-          transformOrigin: 'center center',
-          position: 'relative',
-          flexShrink: 0,
-        }}
-      >
-        {/* SVG statique : anneau */}
-        <svg
-          width={SIZE} height={SIZE}
-          viewBox={`0 0 ${SIZE} ${SIZE}`}
-          style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}
-        >
+    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+      <div style={{ width: SIZE, height: SIZE, position: 'relative', flexShrink: 0 }}>
+
+        {/* SVG anneau statique */}
+        <svg width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`}
+          style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
           <circle cx={CX} cy={CY} r={R_EXT} fill={anneauFill} stroke={anneauStroke} strokeWidth="2.5" />
           {masterMode && (
             <>
@@ -309,15 +244,13 @@ export default function Roue({ projets, onSelect, onDeselect, visible, customSou
           )}
         </svg>
 
-        {/* Conteneur rotatif des icônes */}
-        <div
-          style={{
-            position: 'absolute', width: SIZE, height: SIZE, top: 0, left: 0,
-            transformOrigin: `${CX}px ${CY}px`,
-            transform: `rotate(${rotation}deg)`,
-            transition: masterMode ? 'transform 0.08s linear' : 'transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-          }}
-        >
+        {/* Conteneur rotatif */}
+        <div style={{
+          position: 'absolute', width: SIZE, height: SIZE, top: 0, left: 0,
+          transformOrigin: `${CX}px ${CY}px`,
+          transform: `rotate(${rotation}deg)`,
+          transition: masterMode ? 'transform 0.08s linear' : 'transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+        }}>
           {projets.map((projet, i) => {
             const angleDeg = (i / total) * 360 - 90;
             const angleRad = (angleDeg * Math.PI) / 180;
@@ -328,15 +261,12 @@ export default function Roue({ projets, onSelect, onDeselect, visible, customSou
             const couleurBord = estSelectionne ? couleurSelect : 'rgba(192,132,252,0.55)';
 
             return (
-              <div
-                key={projet.id}
-                className="absolute pointer-events-auto"
+              <div key={projet.id} className="absolute pointer-events-auto"
                 style={{
                   left: x, top: y,
                   transform: `translate(-50%, -50%) rotate(${-rotation}deg)`,
                   transition: masterMode ? 'transform 0.08s linear' : 'transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-                }}
-              >
+                }}>
                 <button
                   disabled={masterMode}
                   onClick={() => {
@@ -359,7 +289,6 @@ export default function Roue({ projets, onSelect, onDeselect, visible, customSou
                     display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
                     background: 'none', border: 'none',
                     cursor: masterMode ? 'default' : 'pointer', padding: 0,
-                    minWidth: 48, minHeight: 48,
                   }}
                 >
                   <div style={{
@@ -403,7 +332,7 @@ export default function Roue({ projets, onSelect, onDeselect, visible, customSou
             fontSize: 9, letterSpacing: '0.15em', textTransform: 'uppercase',
             whiteSpace: 'nowrap', transition: 'color 0.3s',
           }}>
-            {masterMode ? '— MASTER CONTROL —' : projetOuvert ? 'échap • fermer' : '← swipe → • tap • ouvrir'}
+            {masterMode ? '— MASTER CONTROL —' : projetOuvert ? 'échap • fermer' : '← → naviguer • entrée • ouvrir'}
           </span>
         </div>
       </div>
