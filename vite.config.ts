@@ -1,69 +1,52 @@
-import path from 'path'; // N'oublie pas d'installer @types/node si nécessaire : npm i -D @types/node
+import path from 'path';
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 
 export default defineConfig({
-  // --- AJOUT INDISPENSABLE POUR LES ALIAS ---
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
   },
-  // ------------------------------------------
   plugins: [
     react(),
     VitePWA({
       registerType: 'autoUpdate',
+      // Injecte le SW dans le HTML automatiquement
+      injectRegister: 'auto',
       includeAssets: ['favicon.ico', 'AlterEon_2.png', 'profil.jpg'],
-      manifest: {
-        name: 'AlterEon Portfolio',
-        short_name: 'AlterEon',
-        description: 'Portfolio interactif façon Ben 10',
-        theme_color: '#a855f7',
-        background_color: '#000000',
-        display: 'standalone',
-        orientation: 'portrait-primary',
-        start_url: '/',
-        icons: [
-          {
-            src: '/icons/icon-192.png',
-            sizes: '192x192',
-            type: 'image/png',
-            purpose: 'any maskable',
-          },
-          {
-            src: '/icons/icon-512.png',
-            sizes: '512x512',
-            type: 'image/png',
-            purpose: 'any maskable',
-          },
-        ],
-      },
+
       workbox: {
-        // Optimisation : exclure node_modules et se concentrer sur les assets générés
-        globPatterns: ['**/*.{js,css,html,ico,png,jpg,svg,mp3,pdf}'],
+        // Uniquement les assets du build Vite — pas les fichiers publics raw
+        globPatterns: ['**/*.{js,css,html,ico,png,jpg,svg}'],
+        // Nécessaire pour que React Router / SPA fonctionne offline
+        navigateFallback: 'index.html',
+        // Exclut les routes Vercel/API du fallback
+        navigateFallbackDenylist: [/^\/api\//],
+        // Ne pas mettre en cache les sons et PDF (trop lourds, rarement offline)
+        globIgnores: ['**/*.mp3', '**/*.pdf'],
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
             handler: 'CacheFirst',
-            options: { 
+            options: {
               cacheName: 'google-fonts-cache',
               expiration: {
                 maxEntries: 10,
-                maxAgeSeconds: 60 * 60 * 24 * 365 // 1 an
-              }
+                maxAgeSeconds: 60 * 60 * 24 * 365,
+              },
             },
           },
           {
             urlPattern: /^https:\/\/fonts\.gstatic\.com\/.*/i,
             handler: 'CacheFirst',
-            options: { 
+            options: {
               cacheName: 'gstatic-fonts-cache',
               expiration: {
                 maxEntries: 10,
-                maxAgeSeconds: 60 * 60 * 24 * 365 
-              }
+                maxAgeSeconds: 60 * 60 * 24 * 365,
+              },
             },
           },
         ],
