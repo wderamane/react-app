@@ -1,10 +1,12 @@
 export type EntreeType = 'projet' | 'profil' | 'langages';
+export type StatutProjet = 'en-cours' | null;
 
 export interface Projet {
   id: number;
   type: EntreeType;
   nom: string;
   description: string;
+  statut?: StatutProjet;
   screenshot?: string;
   github?: string;
   demo?: string;
@@ -18,6 +20,7 @@ export const projets: Projet[] = [
     type: 'projet',
     nom: "Projet Alpha",
     description: "Une app de gestion de tâches temps réel.",
+    statut: null,
     screenshot: "/screenshots/alpha.png",
     github: "https://github.com/toi/alpha",
     demo: "https://alpha.vercel.app",
@@ -28,10 +31,10 @@ export const projets: Projet[] = [
     id: 2,
     type: 'projet',
     nom: "Bot Discord Beta",
-    description: "C'est un bot pour gérer les rôles et les messages en plus de pouvoir lancer des musiques et de pouvoir discuter sur Discord.",
+    description: "Bot pour gérer les rôles, messages, musiques et conversations sur Discord.",
+    statut: 'en-cours',
     screenshot: "/screenshots/beta.png",
     github: "https://github.com/toi/beta",
-    demo: "https://beta.vercel.app",
     couleur: "#06b6d4",
     symbolePath: "M35 8 L58 22 L58 48 L35 62 L12 48 L12 22 Z",
   },
@@ -40,6 +43,7 @@ export const projets: Projet[] = [
     type: 'projet',
     nom: "Projet Gamma",
     description: "API REST Node.js avec auth JWT.",
+    statut: null,
     screenshot: "/screenshots/gamma.png",
     github: "https://github.com/toi/gamma",
     couleur: "#22c55e",
@@ -49,7 +53,8 @@ export const projets: Projet[] = [
     id: 4,
     type: 'projet',
     nom: "CLI Dev Tools",
-    description: "Un outil en ligne de commande Node.js pour automatiser la création de projets : génère la structure de dossiers, initialise Git et installe les dépendances en une seule commande.",
+    description: "Outil CLI Node.js pour automatiser la création de projets.",
+    statut: null,
     screenshot: "/screenshots/cli.png",
     github: "https://github.com/toi/cli-dev-tools",
     couleur: "#84cc16",
@@ -59,7 +64,8 @@ export const projets: Projet[] = [
     id: 5,
     type: 'projet',
     nom: "Portfolio v1",
-    description: "Premier portfolio personnel en HTML/CSS/JS vanilla. Animations CSS custom, mode sombre, formulaire de contact fonctionnel.",
+    description: "Premier portfolio en HTML/CSS/JS vanilla. Animations CSS custom, mode sombre.",
+    statut: null,
     screenshot: "/screenshots/portfolio-v1.png",
     github: "https://github.com/toi/portfolio-v1",
     demo: "https://portfolio-v1.vercel.app",
@@ -70,7 +76,8 @@ export const projets: Projet[] = [
     id: 6,
     type: 'projet',
     nom: "Weather App",
-    description: "Application météo React qui consomme l'API OpenWeatherMap. Affiche les prévisions sur 7 jours avec des icônes animées selon les conditions.",
+    description: "App météo React avec API OpenWeatherMap. Prévisions 7 jours, icônes animées.",
+    statut: null,
     screenshot: "/screenshots/weather.png",
     github: "https://github.com/toi/weather-app",
     demo: "https://weather-app.vercel.app",
@@ -81,7 +88,8 @@ export const projets: Projet[] = [
     id: 7,
     type: 'projet',
     nom: "Chat Temps Réel",
-    description: "Application de chat avec Socket.io et Express. Salons multiples, messages privés, indicateur de frappe en temps réel.",
+    description: "Chat avec Socket.io et Express. Salons multiples, messages privés, indicateur de frappe.",
+    statut: 'en-cours',
     screenshot: "/screenshots/chat.png",
     github: "https://github.com/toi/chat-realtime",
     couleur: "#fb7185",
@@ -91,7 +99,8 @@ export const projets: Projet[] = [
     id: 8,
     type: 'projet',
     nom: "Scraper Python",
-    description: "Script Python avec BeautifulSoup et Selenium pour extraire des données de sites web et les exporter en CSV ou JSON automatiquement.",
+    description: "Script Python avec BeautifulSoup et Selenium. Export CSV/JSON automatique.",
+    statut: null,
     screenshot: "/screenshots/scraper.png",
     github: "https://github.com/toi/scraper-python",
     couleur: "#fbbf24",
@@ -101,7 +110,8 @@ export const projets: Projet[] = [
     id: 9,
     type: 'projet',
     nom: "Auth JWT",
-    description: "Système d'authentification complet avec Node.js : inscription, connexion, refresh token, middleware de protection des routes et gestion des sessions.",
+    description: "Authentification complète Node.js : inscription, refresh token, middleware de protection.",
+    statut: null,
     screenshot: "/screenshots/auth.png",
     github: "https://github.com/toi/auth-jwt",
     couleur: "#a78bfa",
@@ -111,7 +121,8 @@ export const projets: Projet[] = [
     id: 10,
     type: 'projet',
     nom: "Dashboard Admin",
-    description: "Interface d'administration React avec graphiques Recharts, tableau de données filtrable, gestion des utilisateurs et export PDF.",
+    description: "Interface admin React avec Recharts, tableau filtrable, gestion utilisateurs et export PDF.",
+    statut: 'en-cours',
     screenshot: "/screenshots/dashboard.png",
     github: "https://github.com/toi/dashboard-admin",
     demo: "https://dashboard-admin.vercel.app",

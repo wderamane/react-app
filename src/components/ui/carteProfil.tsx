@@ -28,10 +28,11 @@ export default function CarteProfil() {
         <p className="text-purple-400 text-xs font-bold tracking-widest uppercase mt-0.5">{profil.titre}</p>
         <p className="text-zinc-400 text-sm leading-relaxed mt-3">{profil.bio}</p>
 
+        {/* Réseaux */}
         <div className="flex gap-2 mt-4">
           {profil.reseaux.github && (
-            
-             <a href={profil.reseaux.github}
+            <a
+              href={profil.reseaux.github}
               target="_blank"
               rel="noopener noreferrer"
               className="flex-1 py-2 rounded-lg text-xs font-bold tracking-widest uppercase text-center border border-purple-500 text-purple-400 hover:bg-purple-500/10 transition-all"
@@ -40,8 +41,8 @@ export default function CarteProfil() {
             </a>
           )}
           {profil.reseaux.linkedin && (
-            
-            <a href={profil.reseaux.linkedin}
+            <a
+              href={profil.reseaux.linkedin}
               target="_blank"
               rel="noopener noreferrer"
               className="flex-1 py-2 rounded-lg text-xs font-bold tracking-widest uppercase text-center bg-purple-500 text-black hover:bg-purple-400 transition-all"
@@ -50,6 +51,23 @@ export default function CarteProfil() {
             </a>
           )}
         </div>
+
+        {/* Bouton CV PDF */}
+        {profil.cv && (
+          <a
+            href={profil.cv}
+            download
+            className="mt-3 flex items-center justify-center gap-2 w-full py-2 rounded-lg text-xs font-bold tracking-widest uppercase border border-zinc-600 text-zinc-300 hover:border-purple-500 hover:text-purple-400 transition-all"
+          >
+            {/* Icône téléchargement */}
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="7 10 12 15 17 10"/>
+              <line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+            Télécharger CV
+          </a>
+        )}
       </div>
     </div>
   );

@@ -3,6 +3,7 @@ export const profil = {
   titre: "Étudiant en informatique",
   bio: "Passionné par le développement web, développement de nouvelles applications et de robotique, je suis toujours à la recherche de nouveaux défis pour améliorer mes compétences et créer des projets innovants.",
   photo: "/profil.jpg",
+  cv: "/cv.pdf",
   localisation: "Nouméa, Nouvelle-Calédonie",
   reseaux: {
     github: "https://github.com/wderamane",
